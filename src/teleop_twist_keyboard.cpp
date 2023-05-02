@@ -1,5 +1,7 @@
 #include <ros/ros.h>
 #include <geometry_msgs/Twist.h>
+#include <sensor_msgs/Joy.h>
+#include <std_msgs/Int8.h>
 
 #include <stdio.h>
 #include <unistd.h>
@@ -7,6 +9,7 @@
 
 #include <map>
 
+//For Mighty teleop_twist_keyboard.cpp
 // Map for movement keys
 std::map<char, std::vector<float>> moveBindings
 {
@@ -114,10 +117,12 @@ int main(int argc, char** argv)
   ros::NodeHandle nh;
 
   // Init cmd_vel publisher
-  ros::Publisher pub = nh.advertise<geometry_msgs::Twist>("cmd_vel", 1);
+  ros::Publisher cmd_vel_pub = nh.advertise<geometry_msgs::Twist>("/cmd_vel", 10);
+  ros::Publisher driving_mode_pub = nh.advertise<std_msgs::Int8>("/driving_mode", 10);
 
   // Create Twist message
-  geometry_msgs::Twist twist;
+  geometry_msgs::Twist cmd_vel;
+  std_msgs::Int8 driving_mode;
 
   printf("%s", msg);
   printf("\rCurrent: speed %f\tturn %f | Awaiting command...\r", speed, turn);
@@ -135,6 +140,7 @@ int main(int argc, char** argv)
       y = moveBindings[key][1];
       z = moveBindings[key][2];
       th = moveBindings[key][3];
+      driving_mode.data = 1;
 
       printf("\rCurrent: speed %f\tturn %f | Last command: %c   ", speed, turn, key);
     }
@@ -168,17 +174,18 @@ int main(int argc, char** argv)
     }
 
     // Update the Twist message
-    twist.linear.x = x * speed;
-    twist.linear.y = y * speed;
-    twist.linear.z = z * speed;
+    cmd_vel.linear.x = x * speed;
+    cmd_vel.linear.y = y * speed;
+    cmd_vel.linear.z = z * speed;
 
-    twist.angular.x = 0;
-    twist.angular.y = 0;
-    twist.angular.z = th * turn;
+    cmd_vel.angular.x = 0;
+    cmd_vel.angular.y = 0;
+    cmd_vel.angular.z = th * turn;
 
     // Publish it and resolve any remaining callbacks
-    pub.publish(twist);
-    ros::spinOnce();
+    cmd_vel_pub.publish(cmd_vel);
+    driving_mode_pub.publish(driving_mode);
+    ros::spin();
   }
 
   return 0;
